@@ -1,4 +1,19 @@
-# Concepts used in this project:
+# What is F1gpt?
+
+A chatbot that helps getting any available information about F1 motorsport when asked questions.
+
+**How it works?**
+
+- We use DataStax(because it supports vector embeddings - used for semantic search),
+- OpenAI's API to get those embeddings from the database,
+- We use a handler to handle API requests and generate embeddings by sending an API request to OpenAI
+- create array list containing URLs about F1
+- then we create collection if it does not exist and we take dimensions from text-embedding-3-small docs
+- loadSampleData scrapes the data from web page, splits the data into chunks and then generates and stores embeddings
+- Then we load sample data(scraped from web page) into db
+- (we also clean the data from any html tags using scrapedContent)
+
+**Concepts used in this project:**
 
 We start with importing external libraries:
 
@@ -9,7 +24,7 @@ We start with importing external libraries:
 5. RecursiveCharacterTextSplitter - Breaks down large text into manageable chunks, ensuring compatibility with embedding models and database constraints.
 6. gpt-3-encoder - Helps manage token limits when working with OpenAI's models.
 
-List of concepts used in the project so far:
+**List of concepts used in the project so far:**
 
 - Asynchronous Programming:
   Use of async/await for handling asynchronous operations.
@@ -84,3 +99,23 @@ List of concepts used in the project so far:
   To ensure that the text is broken into pieces that fit within these limits.
 
 - chunkOverlap: 100: number of characters (or tokens) that will overlap between consecutive chunks.
+
+Embeddings - are numerical representations of data (like text, images, or audio) that capture their semantic meaning
+
+**Why we did what we did?**
+
+1. why datastax - supports vector embeddings and similarity search and cost effective.
+
+2. SimilarityMetric - part of typescript.
+   in TS, we can define custom types using type keyword.
+
+   - it allows us to define custom shape or set of values a variable(here, SimilarityMetric), parameter or property
+   - improves code readability, reduces errors
+   - ensures similarityMetric parameter is one of 'cosine', 'dot product'
+
+3. why text-embedding-3-small - it supports semantic search
+
+# Next steps:
+
+- Build user interface
+- use handleApiRequest in loadSampleData for reusability

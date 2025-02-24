@@ -14,11 +14,13 @@ import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { encode } from 'gpt-3-encoder';
 
 //initialize openAi client
+//api key is passes as a configuration option from .env
 const openai = new OpenAI({ apiKey: process.env.OPEN_API_KEY });
 
 //testing the API
 (async () => {
     try {
+        //This sends a request to OpenAI's API to generate embeddings for the text "Test input".
         const testEmbedding = await openai.embeddings.create({
             model: 'text-embedding-3-small',
             input: 'Test input',
