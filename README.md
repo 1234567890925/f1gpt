@@ -1,4 +1,4 @@
-# What is F1gpt?
+# What is f1gpt?
 
 A chatbot that helps getting any available information about F1 motorsport when asked questions.
 

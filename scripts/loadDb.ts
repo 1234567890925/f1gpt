@@ -1,21 +1,45 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
+//import OpenAI from "openai"
+import { OpenAI } from 'openai';
+
+const apiKey = process.env.OPENAI_API_KEY;
+console.log("API KEY from env:", process.env.OPENAI_API_KEY?.slice(0, 5));  // just a test
+
+
+if (!apiKey) {
+  throw new Error("OPENAI_API_KEY is missing from environment variables.");
+}
+
+const openai = new OpenAI({
+  apiKey,
+});
+
+
 //importing libraries 
 //interacts with astra db - further used for connecting to the database, creating collection, inserting data
-import { DataAPIClient } from '@datastax/astra-db-ts';
+//import { createClient, Namespace, Collection } from "@datastax/astra-db-ts";
+import { DataAPIClient } from "@datastax/astra-db-ts";
+//import { createClient } from "@datastax/astra-db-ts";
+
+
 // accesses opensi's api embeddings - extracting content from url
-import OpenAI from "openai"
+//import OpenAI from "openai"
 //used for web scraping task 
 import { PuppeteerWebBaseLoader } from "@langchain/community/document_loaders/web/puppeteer";
 //loads env var from .env file - accessing configuration like api keys, database creds
-import "dotenv/config";
+
+//import "dotenv/config";
 // split data into chunks
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 //managing token limits 
 //import {loader} from "next/dist/build/webpack/config/helpers";
 import { encode } from 'gpt-3-encoder';
-
+import puppeteer from "puppeteer";
 //initialize openAi client
-//api key is passes as a configuration option from .env
-const openai = new OpenAI({ apiKey: process.env.OPEN_API_KEY });
+//api key is passed as a configuration option from .env
+//const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 //testing the API
 (async () => {
@@ -26,7 +50,7 @@ const openai = new OpenAI({ apiKey: process.env.OPEN_API_KEY });
             input: 'Test input',
             encoding_format: 'float',
         });
-        console.log('OpenAI API is working. Test embedding:', testEmbedding);
+        //console.log('OpenAI API is working. Test embedding:', testEmbedding);
     } catch (error) {
         console.error('OpenAI API request failed:', error);
     }
@@ -71,7 +95,7 @@ const resetInterval = 1000; // 1 second
 
 // Reset the counter every second
 setInterval(() => {
-    console.log(`Requests made in the last second: ${requestCount}`);
+    //console.log(`Requests made in the last second: ${requestCount}`);
     requestCount = 0;
 }, resetInterval);
 const {
@@ -79,25 +103,25 @@ const {
     ASTRA_DB_COLLECTION,
     ASTRA_DB_API_ENDPOINT,
     ASTRA_DB_APPLICATION_TOKEN,
-    OPEN_API_KEY
+    OPENAI_API_KEY
 } = process.env;
 
-console.log({
+/*console.log({
     ASTRA_DB_NAMESPACE,
     ASTRA_DB_COLLECTION,
     ASTRA_DB_API_ENDPOINT,
     ASTRA_DB_APPLICATION_TOKEN,
-    OPEN_API_KEY
-});
+    OPENAI_API_KEY
+});*/
 
 
 
 //constructor
-//const openai = new OpenAI({apiKey:  OPEN_API_KEY})
+//const openai = new OpenAI({apiKey:  OPENAI_API_KEY})
 
 // finding and adding websites for information
 const f1Data = [
-    'https://en.wikipedia.org/wiki/Formula_One',
+    'https://www.formula1.com/',
     'https://en.wikipedia.org/wiki/2024_Formula_One_World_Championship',
     'https://en.wikipedia.org/wiki/Formula_One_World_Championship_Qualifying',
     'https://en.wikipedia.org/wiki/2023_Formula_One_World_Championship',
@@ -106,10 +130,24 @@ const f1Data = [
     'https://en.wikipedia.org/wiki/Ayrton_Senna'
 ];
 
-console.log("f1Data length -----------------",f1Data.length)
+//console.log("f1Data length -----------------",f1Data.length)
 //initialize db clliebt using application token and endpoint
-const client = new DataAPIClient(ASTRA_DB_APPLICATION_TOKEN)
-const db = client.db(ASTRA_DB_API_ENDPOINT, { keyspace: ASTRA_DB_NAMESPACE })
+//const client = new DataAPIClient(process.env.ASTRA_DB_APPLICATION_TOKEN!);
+
+// Initialize the client
+const client = new DataAPIClient(process.env.ASTRA_DB_APPLICATION_TOKEN!);
+const db = client.db(process.env.ASTRA_DB_API_ENDPOINT!, {
+    keyspace: process.env.ASTRA_DB_NAMESPACE!,
+});
+(async () => {
+  const colls = await db.listCollections();
+  console.log('Connected to AstraDB:', colls);
+})();
+//const db = client.db(process.env.ASTRA_DB_API_ENDPOINT!, {
+    //keyspace: process.env.ASTRA_DB_NAMESPACE!,
+//});
+//const client = new DataAPIClient(ASTRA_DB_APPLICATION_TOKEN)
+//const db = client.db(ASTRA_DB_API_ENDPOINT, { keyspace: ASTRA_DB_NAMESPACE })
 //initialize text splitter  to break text into small chunks
 const splitter = new RecursiveCharacterTextSplitter({
     chunkSize: 512,
@@ -121,20 +159,21 @@ const createCollection = async (similarityMetric: SimilarityMetric='dot_product'
 
     try {
         // Check if the collection already exists
-        const collections = await db.collection(ASTRA_DB_COLLECTION);
-        console.log(`Collection '${ASTRA_DB_COLLECTION}' already exists. Skipping creation.`);
+        //const collection = (db as any).collection(ASTRA_DB_COLLECTION);
+        console.log('hi')
+        //console.log(`Collection '${ASTRA_DB_COLLECTION}' already exists. Skipping creation.`);
         return;
     }
     catch (error: any) {
         if (error.message.includes("Collection does not exist")) {
-            const res = await db.createCollection(ASTRA_DB_COLLECTION, {
-                vector:{
-                    
+            await (db as any).createCollection(ASTRA_DB_COLLECTION, {
+                vector: {
                     dimension: 1536,
-                    metric: similarityMetric
-                }
-            })
-            console.log(res)
+                    metric: "dot_product",
+                },
+            });
+            console.log("✅ Collection created.");
+
         } else {
             console.error('Error checking collection existence:', error);
         }
@@ -142,7 +181,7 @@ const createCollection = async (similarityMetric: SimilarityMetric='dot_product'
 
 const loadSampleData = async () => {
     try {
-        const collection = await db.collection(ASTRA_DB_COLLECTION);
+        const collection = await (db as any).collection(process.env.ASTRA_DB_COLLECTION!);
         for await (const url of f1Data) {
             //scrpes content from the list of URLs
             const content = await scrapePage(url);
@@ -167,7 +206,7 @@ const loadSampleData = async () => {
                     $vector: vector,
                     text: chunk,
                 });
-                console.log('Inserted chunk:', res);
+                //console.log('Inserted chunk:', res);
             }
         }
     } catch (error) {
@@ -175,52 +214,31 @@ const loadSampleData = async () => {
     }
 };
 
-
-
-
-
-
-
-/*    const collection = await db.collection(ASTRA_DB_COLLECTION)
-    for await (const url of f1Data){
-        const content = await scrapePage(url)
-        const chunks = await splitter.splitText(content)
-        for await(const chunk of chunks){
-            const embedding = await openai.embeddings.create({
-                model: "text-embedding-3-small",
-                input: chunk,
-                encoding_format: "float"
-            })
-            const vector = embedding.data[0].embedding
-            const res = await collection.insertOne({
-                    $vector: vector,
-                    text: chunk
-                }
-            )
-            console.log(res)
-        }
-    }
-}*/
-
 //scraping content from a web page using Puppeteer. 
 const scrapePage = async(url:string) =>{
     try {
         //initialize loader to scrape the web page at given URL
         const loader = new PuppeteerWebBaseLoader(url, {
             //Configures Puppeteer's browser instance
-            launchOptions: {
-                //Runs the browser in headless mode (no visible UI).
-                headless: true,
-            },
-            //Configures how Puppeteer waits for the page to load.
-            gotoOptions: {
-                //Waits until the DOM content is loaded 
-                waitUntil: 'domcontentloaded',
-            },
+        launchOptions: {
+            headless: "new", // recommended for modern Puppeteer
+            timeout: 60000,
+            dumpio: true,
+            executablePath: puppeteer.executablePath(),
+            args: [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-gpu",
+            "--disable-dev-shm-usage",
+            ],
+        },
+        gotoOptions: {
+            waitUntil: "domcontentloaded",
+        },
         });
         //scrape content
         const scrapedContent = await loader.scrape();
-        console.log(`scraped Content-----------------------: ${scrapedContent?.length || 0}`);
+        //console.log(`scraped Content-----------------------: ${scrapedContent?.length || 0}`);
         //cleaning scrapped content by removinf HTML tags
         return scrapedContent?.replace(/<[^>]*>?/gm, '|') || '';
     } catch (error) {
@@ -228,32 +246,4 @@ const scrapePage = async(url:string) =>{
         return '';
     }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-   /* new PuppeteerWebBaseLoader(url, {
-        launchOptions:{
-            headless: true,
-        },
-        gotoOptions: {
-            waitUntil: "domcontentloaded"
-        },
-        evaluate: async(page, browser) => {
-            const result = await page.evaluate(() => document.body.innerHTML)
-            await browser.close()
-            return result
-        }
-    })
-    return (await loader.scrape())?.replace(/<[^>]*>?/gm, '|');
-    }
-    */
 createCollection().then(() => loadSampleData())
