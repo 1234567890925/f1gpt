@@ -157,3 +157,22 @@ input[type="submit"]:hover {
   background: #ff1a1a; /* brighter red on hover */
   transform: scale(1.05);
 }
+
+.prompt-suggestion-button {
+  padding: 0.6rem 1.2rem;
+  background-color: #e10600; /* Ferrari red */
+  color: white;
+  border: none;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  box-shadow: 0 0 8px rgba(255, 0, 0, 0.2);
+}
+
+.prompt-suggestion-button:hover {
+  background-color: #ff1a1a;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(255, 0, 0, 0.3);
+}
